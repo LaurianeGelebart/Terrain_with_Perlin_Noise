@@ -93,6 +93,31 @@ public class PerlinNoise
         return (Lerp(y1, y2, w) + 1) / 2;
     }
 
+    /// <summary>
+    /// Fonction pour générer du bruit fractal à l'aide du bruit de Perlin
+    /// </summary>
+    /// <param name="x">Coordonnée x</param>
+    /// <param name="z">Coordonnée z</param>
+    /// <returns>Valeur normalisée du bruit</returns>
+    public float PerlinNoiseFractal(float x, float z, int octaves, float persistence, Vector3 offset)
+    {
+        float total = 0;
+        float frequency = 1;
+        float amplitude = 1;
+        float maxValue = 0;
+
+        for (int i = 0; i < octaves; i++)
+        {
+            total += Perlin3D(x * frequency + offset.x, offset.y, z * frequency + offset.z) * amplitude;
+            maxValue += amplitude;
+
+            amplitude *= persistence;
+            frequency *= 2;
+        }
+
+        return total / maxValue; // Normalisation
+    }
+
 
     /// <summary>
     /// Adoucit la courbe (fade de la valeur d'entrée)

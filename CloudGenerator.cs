@@ -28,8 +28,8 @@ public class CloudGenerator : MonoBehaviour
     void Start()
     {
         perlinNoise = new PerlinNoise();
-        meshCombiner = gameObject.AddComponent<MeshCombiner>(); // Ajoute le composant MeshCombiner
-        StartCoroutine(GenerateCloudsCoroutine()); // Lance la génération des nuages en assynchrone
+        meshCombiner = gameObject.AddComponent<MeshCombiner>();
+        StartCoroutine(GenerateCloudsCoroutine());
     }
 
     /// <summary>
@@ -47,42 +47,71 @@ public class CloudGenerator : MonoBehaviour
             {
                 for (int x = 0; x < width; x++)
                 {
-                    // Utilise le bruit de perlin pour décider si un voxel est créé
-                    float noiseValue = perlinNoise.Perlin3D(
-                        (x + startingPosition.x + offset.x) / perlinNoiseScale,
-                        (y + startingPosition.y + offset.y) / perlinNoiseScale,
-                        (z + startingPosition.z + offset.z) / perlinNoiseScale
-                    );
-
-                    if (noiseValue > threshold)
+                    if (ShouldCreateVoxel(x, y, z, startingPosition))
                     {
-                        Vector3 positionVoxel = new Vector3(
-                            x + startingPosition.x,
-                            y + startingPosition.y,
-                            z + startingPosition.z
-                        );
-
-                        // Crée le voxel du nuage à la position calculée
-                        float randomScale = UnityEngine.Random.Range(2f, 8f);
-                        GameObject cloudVoxel = Instantiate(cloudPrefab, positionVoxel, Quaternion.identity);
-                        cloudVoxel.transform.localScale = Vector3.one * randomScale;
-                        cloudVoxel.transform.parent = this.transform;
-
-                        cloudVoxels.Add(cloudVoxel);
-
+                        CreateVoxel(x, y, z, startingPosition);
                         yield return null;  // Attend la prochaine frame avant de continuer
                     }
                 }
             }
         }
 
-        // Combine tous les voxels pour optimiser
-        meshCombiner.CombineMeshes(this.transform, cloudMaterial);
+        CombineAndOptimizeClouds(); 
+    }
 
-        // Détruit les voxels après  combinaison
+    /// <summary>
+    /// Vérifie si un voxel doit être créé en fonction du bruit de Perlin
+    /// </summary>
+    /// <param name="x">x du voxel</param>
+    /// <param name="y">y du voxel</param>
+    /// <param name="z">z du voxel</param>
+    /// <param name="startingPosition">Position de départ du nuage</param>
+    /// <returns>Vrai si le voxel doit être créé faux sinon</returns>
+    bool ShouldCreateVoxel(int x, int y, int z, Vector3 startingPosition)
+    {
+        float noiseValue = perlinNoise.Perlin3D(
+            (x + startingPosition.x + offset.x) / perlinNoiseScale,
+            (y + startingPosition.y + offset.y) / perlinNoiseScale,
+            (z + startingPosition.z + offset.z) / perlinNoiseScale
+        );
+
+        return noiseValue > threshold;  // Si la valeur du bruit dépasse le seuil, un voxel sera créé
+    }
+
+    /// <summary>
+    /// Crée un voxel de nuage à la position spécifiée avec une échelle aléatoire
+    /// </summary>
+    /// <param name="x">x du voxel</param>
+    /// <param name="y">y du voxel</param>
+    /// <param name="z">z du voxel </param>
+    /// <param name="startingPosition">Position de départ du nuage</param>
+    void CreateVoxel(int x, int y, int z, Vector3 startingPosition)
+    {
+        Vector3 positionVoxel = new Vector3(
+            x + startingPosition.x,
+            y + startingPosition.y,
+            z + startingPosition.z
+        );
+
+        float randomScale = UnityEngine.Random.Range(2f, 8f);
+        GameObject cloudVoxel = Instantiate(cloudPrefab, positionVoxel, Quaternion.identity);
+        cloudVoxel.transform.localScale = Vector3.one * randomScale;
+        cloudVoxel.transform.parent = this.transform;
+
+        cloudVoxels.Add(cloudVoxel);
+    }
+
+    /// <summary>
+    /// Combine tous les voxels de nuage pour optimiser la scène
+    /// </summary>
+    void CombineAndOptimizeClouds()
+    {
+        meshCombiner.CombineMeshes(this.transform, cloudMaterial); 
+
         foreach (GameObject voxel in cloudVoxels)
         {
-            Destroy(voxel);
+            Destroy(voxel);  // Détruit les voxels après la combinaison pour améliorer les performances
         }
+        cloudVoxels.Clear(); 
     }
 }
